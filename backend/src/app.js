@@ -7,7 +7,7 @@ app.use("/downloads", express.static("downloads"));
 
 // Middleware
 app.use(cors({
-  origin: "http://localhost:5173"
+  origin: "https://tune-fetch-beta.vercel.app/"
 }));
 app.use(express.json());
 
