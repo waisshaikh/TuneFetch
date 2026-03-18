@@ -3,6 +3,7 @@ import cors from "cors";
 import { spawn } from "child_process";
 
 const app = express();
+app.use("/downloads", express.static("downloads"));
 
 // Middleware
 app.use(cors({

@@ -73,15 +73,47 @@ export const streamAudio = (req, res) => {
     return res.status(400).json({ error: "URL required" });
   }
 
-  const command = `python -m yt_dlp -f bestaudio -o - "${url}"`;
+  const command = `python -m yt_dlp -f bestaudio -o - "${url}" | ffmpeg -i pipe:0 -f mp3 -ab 192k -`;
 
-  const process = exec(command, { maxBuffer: 1024 * 1024 * 10 });
+  const process = exec(command, { maxBuffer: 1024 * 1024 * 50 });
 
   res.setHeader("Content-Type", "audio/mpeg");
 
   process.stdout.pipe(res);
 
   process.stderr.on("data", (err) => {
-    console.error(err);
+    console.error("FFMPEG ERROR:", err);
+  });
+};
+
+
+export const previewAudio = (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: "URL required" });
+  }
+
+  const id = uuidv4();
+  const filePath = path.resolve(`downloads/${id}.mp3`);
+
+  const command = `python -m yt_dlp -x --audio-format mp3 "${url}" -o "${filePath}"`;
+
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(stderr);
+      return res.status(500).json({ error: "Preview failed ❌" });
+    }
+
+    // wait a bit to ensure file exists
+    setTimeout(() => {
+      if (!fs.existsSync(filePath)) {
+        return res.status(500).json({ error: "File not found ❌" });
+      }
+
+      res.json({
+        audioUrl: `http://localhost:5000/downloads/${id}.mp3`,
+      });
+    }, 1000);
   });
 };
