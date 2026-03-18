@@ -24,7 +24,7 @@ function App() {
       a.download = "audio.mp3";
       a.click();
     } catch (err) {
-      alert("Download failed ");
+      alert("Download failed ❌");
     } finally {
       setLoading(false);
     }
