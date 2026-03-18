@@ -38,3 +38,50 @@ export const downloadMp3 = (req, res) => {
     }, 1500);
   });
 };
+
+export const getVideoInfo = (req, res) => {
+  const { url } = req.body;
+
+  if (!url) {
+    return res.status(400).json({ error: "URL required" });
+  }
+
+  const command = `python -m yt_dlp --dump-json "${url}"`;
+
+  exec(command, (error, stdout, stderr) => {
+    if (error) {
+      console.error(stderr);
+      return res.status(500).json({ error: "Failed to fetch video info" });
+    }
+
+    const data = JSON.parse(stdout);
+
+    res.json({
+      title: data.title,
+      thumbnail: data.thumbnail,
+      duration: data.duration,
+    });
+  });
+};
+
+
+
+export const streamAudio = (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).json({ error: "URL required" });
+  }
+
+  const command = `python -m yt_dlp -f bestaudio -o - "${url}"`;
+
+  const process = exec(command, { maxBuffer: 1024 * 1024 * 10 });
+
+  res.setHeader("Content-Type", "audio/mpeg");
+
+  process.stdout.pipe(res);
+
+  process.stderr.on("data", (err) => {
+    console.error(err);
+  });
+};
