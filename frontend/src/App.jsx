@@ -1,6 +1,8 @@
 import { useState } from "react";
 import axios from "axios";
 
+const API = "https://tunefetch.onrender.com";
+
 function App() {
   const [url, setUrl] = useState("");
   const [video, setVideo] = useState(null);
@@ -8,29 +10,36 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [downloading, setDownloading] = useState(false);
 
+  //  Preview + Info
   const handlePreview = async () => {
     try {
+      if (!url) return alert("Paste URL first!");
+
       setLoading(true);
 
-      const info = await axios.post("http://localhost:5000/api/info", { url });
+      const info = await axios.post(`${API}/info`, { url });
       setVideo(info.data);
 
-      const res = await axios.post("http://localhost:5000/api/preview", { url });
+      const res = await axios.post(`${API}/preview`, { url });
       setAudioUrl(res.data.audioUrl);
 
-    } catch {
-      alert("Invalid URL ❌");
+    } catch (err) {
+      console.error(err);
+      alert("Invalid URL or server error!");
     } finally {
       setLoading(false);
     }
   };
 
+  // ⬇Download
   const handleDownload = async () => {
     try {
+      if (!url) return alert("Paste URL first!");
+
       setDownloading(true);
 
       const res = await axios.post(
-        "http://localhost:5000/api/download",
+        `${API}/download`,
         { url },
         { responseType: "blob" }
       );
@@ -40,6 +49,10 @@ function App() {
       link.href = window.URL.createObjectURL(blob);
       link.download = "audio.mp3";
       link.click();
+
+    } catch (err) {
+      console.error(err);
+      alert("Download failed!");
     } finally {
       setDownloading(false);
     }
@@ -47,7 +60,6 @@ function App() {
 
   return (
     <div className="min-h-screen bg-[#0A0A0A] text-white flex items-center justify-center px-4">
-
       <div className="w-full max-w-xl backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl shadow-2xl p-8">
 
         {/* TITLE */}
@@ -69,13 +81,13 @@ function App() {
             onClick={handlePreview}
             className="px-5 rounded-lg font-semibold bg-gradient-to-r from-[#00E19E] to-[#00C6FF] text-black hover:scale-105 transition"
           >
-            {loading ? "..." : "Preview"}
+            {loading ? "Loading..." : "Preview"}
           </button>
         </div>
 
         {/* CARD */}
         {video && (
-          <div className="mt-6 p-5 rounded-xl bg-white/5 border border-white/10 shadow-lg animate-[fadeIn_0.4s_ease-in-out]">
+          <div className="mt-6 p-5 rounded-xl bg-white/5 border border-white/10 shadow-lg">
 
             {/* THUMBNAIL */}
             <img
@@ -89,10 +101,10 @@ function App() {
               {video.title}
             </h2>
 
-            {/* AUDIO */}
-            <audio controls className="w-full mt-2">
-              <source src={audioUrl} type="audio/mpeg" />
-            </audio>
+            {/* AUDIO PREVIEW */}
+            {audioUrl && (
+              <audio controls src={audioUrl} className="w-full mt-2" />
+            )}
 
             {/* DOWNLOAD */}
             <button
@@ -106,23 +118,6 @@ function App() {
         )}
 
       </div>
-
-      {/* Animation (inline Tailwind style) */}
-      <style>
-        {`
-          @keyframes fadeIn {
-            from {
-              opacity: 0;
-              transform: translateY(20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-        `}
-      </style>
-
     </div>
   );
 }

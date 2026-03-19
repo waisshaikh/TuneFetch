@@ -11,14 +11,15 @@ app.use(express.json());
 // static folder for downloads
 app.use("/downloads", express.static(path.resolve("downloads")));
 
+//  ONLY ONE ROUTE (IMPORTANT FIX)
 app.use("/api", downloadRoute);
 
 app.get("/", (req, res) => {
-  res.send(" YT MP3 Backend Running");
+  res.send("YT MP3 Backend Running");
 });
 
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(` Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
