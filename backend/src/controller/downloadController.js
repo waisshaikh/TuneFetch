@@ -3,9 +3,9 @@ import fs from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 
-
-const BASE_URL = process.env.BASE_URL || "https://tune-fetch-beta.vercel.app";
-
+// ✅ IMPORTANT: backend URL (NOT frontend)
+const BASE_URL =
+  process.env.BASE_URL || "https://tunefetch.onrender.com";
 
 // ================= DOWNLOAD =================
 export const downloadMp3 = (req, res) => {
@@ -19,8 +19,8 @@ export const downloadMp3 = (req, res) => {
   const filePath = path.resolve(`downloads/${id}.mp3`);
   const outputTemplate = `downloads/${id}.%(ext)s`;
 
-  // ✅ REMOVE WINDOWS PATH
-  const command = `python -m yt_dlp -x --audio-format mp3 --audio-quality 0 "${url}" -o "${outputTemplate}"`;
+  // ✅ FIXED: python → python3
+  const command = `python3 -m yt_dlp -x --audio-format mp3 --audio-quality 0 "${url}" -o "${outputTemplate}"`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
@@ -43,8 +43,7 @@ export const downloadMp3 = (req, res) => {
   });
 };
 
-
-
+// ================= VIDEO INFO =================
 export const getVideoInfo = (req, res) => {
   const { url } = req.body;
 
@@ -52,26 +51,33 @@ export const getVideoInfo = (req, res) => {
     return res.status(400).json({ error: "URL required" });
   }
 
-  const command = `python -m yt_dlp --dump-json "${url}"`;
+  // ✅ FIXED
+  const command = `python3 -m yt_dlp --dump-json "${url}"`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.error(stderr);
-      return res.status(500).json({ error: "Failed to fetch video info" });
+      return res
+        .status(500)
+        .json({ error: "Failed to fetch video info" });
     }
 
-    const data = JSON.parse(stdout);
+    try {
+      const data = JSON.parse(stdout);
 
-    res.json({
-      title: data.title,
-      thumbnail: data.thumbnail,
-      duration: data.duration,
-    });
+      res.json({
+        title: data.title,
+        thumbnail: data.thumbnail,
+        duration: data.duration,
+      });
+    } catch (err) {
+      console.error("JSON parse error:", err);
+      res.status(500).json({ error: "Parsing failed" });
+    }
   });
 };
 
-
-
+// ================= STREAM =================
 export const streamAudio = (req, res) => {
   const { url } = req.query;
 
@@ -79,9 +85,12 @@ export const streamAudio = (req, res) => {
     return res.status(400).json({ error: "URL required" });
   }
 
-  const command = `python -m yt_dlp -f bestaudio -o - "${url}" | ffmpeg -i pipe:0 -f mp3 -ab 192k -`;
+  // ✅ FIXED
+  const command = `python3 -m yt_dlp -f bestaudio -o - "${url}" | ffmpeg -i pipe:0 -f mp3 -ab 192k -`;
 
-  const process = exec(command, { maxBuffer: 1024 * 1024 * 50 });
+  const process = exec(command, {
+    maxBuffer: 1024 * 1024 * 50,
+  });
 
   res.setHeader("Content-Type", "audio/mpeg");
 
@@ -92,8 +101,7 @@ export const streamAudio = (req, res) => {
   });
 };
 
-
-
+// ================= PREVIEW =================
 export const previewAudio = (req, res) => {
   const { url } = req.body;
 
@@ -104,20 +112,22 @@ export const previewAudio = (req, res) => {
   const id = uuidv4();
   const filePath = path.resolve(`downloads/${id}.mp3`);
 
-  const command = `python -m yt_dlp -x --audio-format mp3 "${url}" -o "${filePath}"`;
+  // ✅ FIXED
+  const command = `python3 -m yt_dlp -x --audio-format mp3 "${url}" -o "${filePath}"`;
 
   exec(command, (error, stdout, stderr) => {
     if (error) {
       console.error(stderr);
-      return res.status(500).json({ error: "Preview failed " });
+      return res.status(500).json({ error: "Preview failed" });
     }
 
     setTimeout(() => {
       if (!fs.existsSync(filePath)) {
-        return res.status(500).json({ error: "File not found" });
+        return res
+          .status(500)
+          .json({ error: "File not found" });
       }
 
-    
       res.json({
         audioUrl: `${BASE_URL}/downloads/${id}.mp3`,
       });
